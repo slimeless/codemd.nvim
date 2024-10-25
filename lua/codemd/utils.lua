@@ -12,7 +12,7 @@ local function count_of_lines(path)
 	if count > 100 then
 		return 100
 	end
-	return 2
+	return count
 end
 
 local function filetype(path)
@@ -26,8 +26,12 @@ local function filetype(path)
 	end
 end
 
-local M = {}
-M.get_file_with_range = function(path, left, right)
+local function parse_prefix(input)
+	local val1, val2 = input:match("%(([^:]+):([^%)]+)%)@")
+	return tonumber(val1), tonumber(val2)
+end
+
+local get_file_with_range = function(path, left, right)
 	left = left or 1
 	right = right or count_of_lines(path)
 	local file, err = io.open(path, "r")
@@ -48,9 +52,10 @@ M.get_file_with_range = function(path, left, right)
 	table.insert(res, "```" .. filetype(path) .. "\n")
 	table.insert(res, table.concat(data, "\n"))
 	table.insert(res, "\n```\n")
-	return res
+	return res, left, right
 end
 
+local M = {}
 local is_valid_file = function(path)
 	if vim.fn.filereadable(path) == 1 then
 		return true
@@ -69,24 +74,24 @@ M.oldfiles = function()
 end
 
 M.create_cmp_items = function(request)
-	local input = string.sub(request.context.cursor_before_line, request.offset - 1)
 	local prefix = string.sub(request.context.cursor_before_line, 1, request.offset - 1)
+	local left, right = parse_prefix(prefix)
+	print(prefix, right, left)
 	local keys = M.oldfiles()
 	local items = {}
 	for _, path in ipairs(keys) do
 		local filename = vim.fn.fnamemodify(path, ":t")
-		local textEditTable = M.get_file_with_range(path, 1, 5)
+		local textEditTable, tip_left, tip_right = get_file_with_range(path, right, left)
 		local textEdit = table.concat(textEditTable, "\n")
 		table.insert(items, {
 			filterText = filename,
 			label = filename,
-			detail = path,
 			textEdit = {
 				newText = textEdit,
 				range = {
 					start = {
 						line = request.context.cursor.row - 1,
-						character = request.context.cursor.col - 1 - #input,
+						character = 0,
 					},
 					["end"] = {
 						line = request.context.cursor.row - 1,
@@ -94,6 +99,8 @@ M.create_cmp_items = function(request)
 					},
 				},
 			},
+			documentation = textEdit,
+			detail = path .. " (lines " .. tip_left .. " - " .. tip_right .. ")",
 		})
 	end
 	return items

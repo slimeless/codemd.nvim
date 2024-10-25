@@ -21,13 +21,6 @@ function source:get_position_encoding_kind()
 	return "utf-16"
 end
 
----Return the keyword pattern for triggering completion (optional).
----If this is omitted, nvim-cmp will use a default keyword pattern. See |cmp-config.completion.keyword_pattern|.
----@return string
-function source:get_keyword_pattern()
-	return [[\k\+]]
-end
-
 ---Return trigger characters for triggering completion (optional).
 function source:get_trigger_characters()
 	return { "@" }
@@ -46,9 +39,6 @@ end
 ---@param completion_item lsp.CompletionItem
 ---@param callback fun(completion_item: lsp.CompletionItem|nil)
 function source:resolve(completion_item, callback)
-	local table_doc = utils.get_file_with_range(completion_item.detail, 1, 5)
-	local doc = table.concat(table_doc, "\n")
-	completion_item.documentation = doc
 	callback(completion_item)
 end
 
